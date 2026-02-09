@@ -1,34 +1,58 @@
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
 import './App.css'
 
+const columns = [
+  {label: 'Title', key: 'Title'},
+  {label: 'Shooter', key: 'Shooter'},
+  {label: 'Drill', key: 'Drill'},
+  {label: 'Time 1', key: 'Time1'},
+  {label: 'Time 2', key: 'Time2'},
+  {label: 'Time 3', key: 'Time3'},
+]
+
 function App() {
-  const [count, setCount] = useState(0)
+  const [data, setData] = useState(
+    Array.from({ length: 6 }, () => ({
+      Title: '',
+      Shooter: '',
+      Drill: '',
+      Time1: '',
+      Time2: '',
+      Time3: '',
+    }))
+  )
+
+  function updateCell(rowIndex, field, value) {
+    const newData = [...data]
+    newData[rowIndex][field] = value
+    setData(newData)
+  }
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    <div className='page'>
+     <div className="sheet">
+      {columns.map((col) => (
+        <div key={col.key} className="cell header">
+          {col.label}
+        </div>
+      ))}
+
+      {data.map((row, rowIndex) =>
+        columns.map((col) => {
+          return (
+            <input
+              key={`${rowIndex}-${col.key}`}
+              className="cell"
+              value={row[col.key]}
+              onChange={(e) =>
+                updateCell(rowIndex, col.key, e.target.value)
+              }
+            />
+          )
+        })
+      )}
+    </div>
+  </div>
   )
 }
 
