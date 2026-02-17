@@ -1,3 +1,10 @@
+//At this point - AI has written or rewrote multiple lines in attempts for me to understand what the hell i'm doin so I can take little to no credit for this project.
+
+//things I want to add, 
+//make the time columns only accept integers
+//Ability to save data such as shooters, and a way to compare times so best time is highlighted for each shooter
+//Allow users to input weapon options 
+
 import { useState } from 'react';
 import './App.css';
 
@@ -34,11 +41,30 @@ const createEmptyRow = () => ({
 const TimeStandards = {
   Operator: { Cover: 0.3, 'Single Fire': 0.2, 'Two Shot Reload': 0.4, Eleanor: 0.45, Mozambique: 0.35, Transition: 0.55 },
   Shooter: { Cover: 0.6, 'Single Fire': 0.5, 'Two Shot Reload': 0.7, Eleanor: 0.6, Mozambique: 0.5, Transition: 0.7 },
-  Safety: { Cover: 0.6, 'Single Fire': 0.5, 'Two Shot Reload': 0.7, Eleanor: 0.6, Mozambique: 0.5, Transition: 0.7 },
+  Safety: { Cover: 0.4, 'Single Fire': 0.3, 'Two Shot Reload': 0.5, Eleanor: 0.5, Mozambique: 0.4, Transition: 0.6 },
 };
 
 function App() {
-  const [data, setData] = useState(Array.from({ length: 6 }, createEmptyRow));
+const [data, setData] = useState(() => {
+  const saved = localStorage.getItem('savedData');
+  let initialRows = [];
+
+  if (saved) {
+    try {
+      initialRows = JSON.parse(saved);
+    } catch (e) {
+      console.error("Failed to parse saved data:", e);
+    }
+  }
+
+  // Ensure at least one empty row at the end
+  if (!initialRows.length || Object.values(initialRows[initialRows.length - 1]).some(v => v !== '')) {
+    initialRows.push(createEmptyRow());
+  }
+
+  return initialRows;
+});
+
 
   const updateCell = (rowIndex, field, value) => {
     setData(prevData => {
@@ -201,11 +227,3 @@ function App() {
 }
 
 export default App;
-
-
-
-//things I need to add, 
-//make the time columns only accept integers
-//Ability to save data such as shooters, and a way to compare times.
-//A way to change drills based on carbine/ pistol. So maybe Drill can be a drop down menu itself Pistol Drills and Carbine Drills
-// Titles set the times for the drill par. So an operator may have a drill par time of .5 seconds, while a shooter is 1.2 seconds
