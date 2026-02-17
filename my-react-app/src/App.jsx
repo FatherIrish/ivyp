@@ -1,9 +1,8 @@
-//At this point - AI has written or rewrote multiple lines in attempts for me to understand what the hell i'm doin so I can take little to no credit for this project.
-
 //things I want to add, 
 //make the time columns only accept integers
 //Ability to save data such as shooters, and a way to compare times so best time is highlighted for each shooter
-//Allow users to input weapon options 
+//Allow users to input weapon options, istead of pistol it can read Czech 9mm, or Glock 22
+//Add a check box for with or with out holster - if checked will automaticall add .20 seconds to the shooters time - a handicap. Even though my times are damn close to shooters with out a holster.
 
 import { useState } from 'react';
 import './App.css';
