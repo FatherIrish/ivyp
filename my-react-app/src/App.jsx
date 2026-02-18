@@ -19,13 +19,11 @@ const DrillOptionsByWeapon = {
   Pistol: ['Cover', 'Single Fire', 'Two Shot Reload', 'Eleanor', 'Mozambique', 'Transition'],
 };
 
-const holster_handicap = 0.25;
 
 const createEmptyRow = () => ({
   Title: '',
   Shooter: '',
   Weapon: '',
-  Holster: false,
   Drill: '',
   Time1: '',
   Time2: '',
@@ -34,9 +32,9 @@ const createEmptyRow = () => ({
 });
 
 const TimeStandards = {
-  Operator: { Cover: 0.3, 'Single Fire': 0.2, 'Two Shot Reload': 0.4, Eleanor: 0.45, Mozambique: 0.35, Transition: 0.55 },
-  Shooter: { Cover: 0.6, 'Single Fire': 0.5, 'Two Shot Reload': 0.7, Eleanor: 0.6, Mozambique: 0.5, Transition: 0.7 },
-  Safety: { Cover: 0.4, 'Single Fire': 0.3, 'Two Shot Reload': 0.5, Eleanor: 0.5, Mozambique: 0.4, Transition: 0.6 },
+  Operator: { Cover: 1.5, 'Single Fire': 1.0, 'Two Shot Reload': 3.5, Eleanor: 2.5, Mozambique: 1.5, Transition: 3.0 },
+  Shooter: { Cover: 2.0, 'Single Fire': 2.0, 'Two Shot Reload': 5.0, Eleanor: 5.0, Mozambique: 2.5, Transition: 5.0 },
+  Safety: { Cover: 1.7, 'Single Fire': 1.8, 'Two Shot Reload': 4.0, Eleanor: 4.5, Mozambique: 2.0, Transition: 4.0 },
 };
 
 function App() {
@@ -51,70 +49,76 @@ function App() {
         console.error('Failed to parse saved data:', e);
       }
     }
-    return Array.from({ length: 5 }, createEmptyRow);
+    return Array.from({ length: 6 }, createEmptyRow);
   });
 
   // Dynamically generate columns
-  const columns = (() => {
-    const showHolster = data.some(row => row.Weapon === 'Pistol');
-    const cols = [
-      { label: 'Title', key: 'Title' },
-      { label: 'Shooter', key: 'Shooter' },
-      { label: 'Weapon', key: 'Weapon' },
-    ];
-    if (showHolster) cols.push({ label: 'Holster', key: 'Holster' });
-    cols.push(
-      { label: 'Drill', key: 'Drill' },
-      { label: 'Time 1', key: 'Time1' },
-      { label: 'Time 2', key: 'Time2' },
-      { label: 'Time 3', key: 'Time3' },
-      { label: 'AVG', key: 'AVG' }
-    );
-    return cols;
-  })();
+const columns = [
+  { label: 'Title', key: 'Title' },
+  { label: 'Shooter', key: 'Shooter' },
+  { label: 'Weapon', key: 'Weapon' },
+  { label: 'Drill', key: 'Drill'},
+  { label: 'Time 1', key: 'Time1' },
+  { label: 'Time 2', key: 'Time2' },
+  { label: 'Time 3', key: 'Time3' },
+  { label: 'AVG', key: 'AVG' },
+];
 
-  const updateCell = (rowIndex, field, value) => {
-    setData(prevData =>
-      prevData.map((row, i) => {
-        if (i !== rowIndex) return row;
+const [selectedDrill, setSelectedDrill] = useState('');
 
-        const updatedRow = { ...row, [field]: value };
+const updateCell = (rowIndex, field, value) => {
+  setData(prevData => {
+    let updatedData = prevData.map((row, i) => {
+      if (i !== rowIndex) return row;
+      const updatedRow = { ...row, [field]: value };
 
-        if (field === 'Title') {
-          updatedRow.Shooter = '';
-          updatedRow.Weapon = '';
-          updatedRow.Drill = '';
-          updatedRow.Time1 = '';
-          updatedRow.Time2 = '';
-          updatedRow.Time3 = '';
-          updatedRow.Holster = false;
-        }
+      // Reset dependent fields
+      if (field === 'Title') {
+        updatedRow.Shooter = '';
+        updatedRow.Weapon = '';
+        updatedRow.Drill = '';
+        updatedRow.Time1 = '';
+        updatedRow.Time2 = '';
+        updatedRow.Time3 = '';
+      }
 
-        if (field === 'Weapon') {
-          updatedRow.Drill = '';
-          updatedRow.Time1 = '';
-          updatedRow.Time2 = '';
-          updatedRow.Time3 = '';
-          updatedRow.Holster = false;
-        }
+      if (field === 'Weapon') {
+        updatedRow.Drill = '';
+        updatedRow.Time1 = '';
+        updatedRow.Time2 = '';
+        updatedRow.Time3 = '';
+      }
 
-        if (field === 'Drill') {
-          updatedRow.Time1 = '';
-          updatedRow.Time2 = '';
-          updatedRow.Time3 = '';
-        }
+      if (field === 'Drill') {
+        updatedRow.Time1 = '';
+        updatedRow.Time2 = '';
+        updatedRow.Time3 = '';
+      }
 
-        return updatedRow;
-      })
-    );
-  };
+      return updatedRow;
+    });
+
+    // Auto-add a new row if editing the last row and it has some value
+    const lastRow = updatedData[updatedData.length - 1];
+    if (!isRowEmpty(lastRow)) {
+      updatedData.push(createEmptyRow());
+    }
+
+    return updatedData;
+  });
+};
+
+    
+  const isRowEmpty = (row) =>
+  Object.values(row).every((v) => v === '' || v === null || v === undefined);
+
 
   const getStandardTime = row => {
     const titleData = TimeStandards[row.Title];
     if (!titleData) return null;
-    const base = titleData[row.Drill];
+    const base = titleData[selectedDrill];
     if (base == null) return null;
-    return row.Holster ? base + holster_handicap : base;
+    return base;
   };
 
   const calculateAverage = row => {
@@ -141,7 +145,7 @@ function App() {
           className="row header"
           style={{
             gridTemplateColumns: columns
-              .map(col => (col.key === 'Holster' || col.key === 'AVG' ? '60px' : '1fr'))
+              .map(col => (col.key === 'AVG' ? '60px' : '1fr'))
               .join(' '),
           }}
         >
@@ -159,7 +163,7 @@ function App() {
             className="row"
             style={{
               gridTemplateColumns: columns
-                .map(col => (col.key === 'Holster' || col.key === 'AVG' ? '60px' : '1fr'))
+                .map(col => (col.key === 'AVG' ? '60px' : '1fr'))
                 .join(' '),
             }}
           >
@@ -211,40 +215,42 @@ function App() {
                 );
               }
 
-              // Holster
-              if (col.key === 'Holster') {
-                return (
-                  <div key={`${rowIndex}-${col.key}`} className="cell">
-                    {row.Weapon === 'Pistol' && (
-                      <input
-                        type="checkbox"
-                        checked={row.Holster}
-                        onChange={e => updateCell(rowIndex, 'Holster', e.target.checked)}
-                      />
-                    )}
-                  </div>
-                );
-              }
 
               // Drill
-              if (col.key === 'Drill') {
-                const drillsToShow = row.Weapon ? DrillOptionsByWeapon[row.Weapon] : [];
-                return (
-                  <select
-                    key={`${rowIndex}-${col.key}`}
-                    className="cell"
-                    value={row[col.key]}
-                    onChange={e => updateCell(rowIndex, col.key, e.target.value)}
-                  >
-                    <option value="">-- Select Drill --</option>
-                    {drillsToShow.map(d => (
-                      <option key={d} value={d}>
-                        {d}
-                      </option>
-                    ))}
-                  </select>
-                );
-              }
+if (col.key === 'Drill') {
+  const allWeapons = data.map(row => row.Weapon).filter(Boolean);
+  const firstWeapon = allWeapons[0];
+  const drillsToShow = firstWeapon ? DrillOptionsByWeapon[firstWeapon] : [];
+
+  return (
+    <select
+      key={`${rowIndex}-${col.key}`}
+      className="cell"
+      value={selectedDrill}
+      onChange={e => {
+        setSelectedDrill(e.target.value);
+
+        // Reset times for ALL rows when drill changes
+        setData(prev =>
+          prev.map(row => ({
+            ...row,
+            Time1: '',
+            Time2: '',
+            Time3: '',
+          }))
+        );
+      }}
+    >
+      <option value="">-- Select Drill --</option>
+      {drillsToShow.map(d => (
+        <option key={d} value={d}>
+          {d}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 
               // Time columns
               if (col.key.startsWith('Time')) {
