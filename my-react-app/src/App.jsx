@@ -1,7 +1,6 @@
 //AI has done a fair bit of the leg work for me, but my main goal was to learn the functions and structures of JAVAscript.
 //as of Feb 17 I have started to actually write and diagnose my additions - lowering my use of AI to trouble shoot/identify options.
 
-
 //things I want to add, 
 //make the time columns only accept integers
 //Ability to save data such as shooters, and a way to compare times so best time is highlighted for each shooter
@@ -13,12 +12,16 @@ import './App.css';
 
 const TitleOptions = ['Operator', 'Safety', 'Shooter'];
 const WeaponOptions = ['Carbine', 'Pistol'];
-
 const DrillOptionsByWeapon = {
   Carbine: ['Cover', 'Single Fire', 'Two Shot Reload', 'Eleanor', 'Mozambique', 'Transition'],
   Pistol: ['Cover', 'Single Fire', 'Two Shot Reload', 'Eleanor', 'Mozambique', 'Transition'],
 };
 
+const TimeStandards = {
+  Operator: { Cover: 1.5, 'Single Fire': 1.0, 'Two Shot Reload': 3.5, Eleanor: 2.5, Mozambique: 1.5, Transition: 3.0 },
+  Shooter: { Cover: 2.0, 'Single Fire': 2.0, 'Two Shot Reload': 5.0, Eleanor: 5.0, Mozambique: 2.5, Transition: 5.0 },
+  Safety: { Cover: 1.7, 'Single Fire': 1.8, 'Two Shot Reload': 4.0, Eleanor: 4.5, Mozambique: 2.0, Transition: 4.0 },
+};
 
 const createEmptyRow = () => ({
   Title: '',
@@ -31,11 +34,16 @@ const createEmptyRow = () => ({
   AVG: '',
 });
 
-const TimeStandards = {
-  Operator: { Cover: 1.5, 'Single Fire': 1.0, 'Two Shot Reload': 3.5, Eleanor: 2.5, Mozambique: 1.5, Transition: 3.0 },
-  Shooter: { Cover: 2.0, 'Single Fire': 2.0, 'Two Shot Reload': 5.0, Eleanor: 5.0, Mozambique: 2.5, Transition: 5.0 },
-  Safety: { Cover: 1.7, 'Single Fire': 1.8, 'Two Shot Reload': 4.0, Eleanor: 4.5, Mozambique: 2.0, Transition: 4.0 },
-};
+const columns = [
+  { label: 'Title', key: 'Title' },
+  { label: 'Shooter', key: 'Shooter' },
+  { label: 'Weapon', key: 'Weapon' },
+  { label: 'Drill', key: 'Drill' },
+  { label: 'Time 1', key: 'Time1' },
+  { label: 'Time 2', key: 'Time2' },
+  { label: 'Time 3', key: 'Time3' },
+  { label: 'AVG', key: 'AVG' },
+];
 
 function App() {
   const [data, setData] = useState(() => {
@@ -52,73 +60,54 @@ function App() {
     return Array.from({ length: 6 }, createEmptyRow);
   });
 
-  // Dynamically generate columns
-const columns = [
-  { label: 'Title', key: 'Title' },
-  { label: 'Shooter', key: 'Shooter' },
-  { label: 'Weapon', key: 'Weapon' },
-  { label: 'Drill', key: 'Drill'},
-  { label: 'Time 1', key: 'Time1' },
-  { label: 'Time 2', key: 'Time2' },
-  { label: 'Time 3', key: 'Time3' },
-  { label: 'AVG', key: 'AVG' },
-];
+  const [selectedDrill, setSelectedDrill] = useState('');
 
-const [selectedDrill, setSelectedDrill] = useState('');
+  const updateCell = (rowIndex, field, value) => {
+    setData(prevData => {
+      const updatedData = prevData.map((row, i) => {
+        if (i !== rowIndex) return row;
+        const updatedRow = { ...row, [field]: value };
 
-const updateCell = (rowIndex, field, value) => {
-  setData(prevData => {
-    let updatedData = prevData.map((row, i) => {
-      if (i !== rowIndex) return row;
-      const updatedRow = { ...row, [field]: value };
+        // Reset dependent fields
+        if (field === 'Title') {
+          updatedRow.Shooter = '';
+          updatedRow.Weapon = '';
+          updatedRow.Drill = '';
+          updatedRow.Time1 = '';
+          updatedRow.Time2 = '';
+          updatedRow.Time3 = '';
+        }
+        if (field === 'Weapon') {
+          updatedRow.Drill = '';
+          updatedRow.Time1 = '';
+          updatedRow.Time2 = '';
+          updatedRow.Time3 = '';
+        }
+        if (field === 'Drill') {
+          updatedRow.Time1 = '';
+          updatedRow.Time2 = '';
+          updatedRow.Time3 = '';
+        }
 
-      // Reset dependent fields
-      if (field === 'Title') {
-        updatedRow.Shooter = '';
-        updatedRow.Weapon = '';
-        updatedRow.Drill = '';
-        updatedRow.Time1 = '';
-        updatedRow.Time2 = '';
-        updatedRow.Time3 = '';
-      }
+        return updatedRow;
+      });
 
-      if (field === 'Weapon') {
-        updatedRow.Drill = '';
-        updatedRow.Time1 = '';
-        updatedRow.Time2 = '';
-        updatedRow.Time3 = '';
-      }
+      // Auto-add a new row if last row is not empty
+      const lastRow = updatedData[updatedData.length - 1];
+      if (!isRowEmpty(lastRow)) updatedData.push(createEmptyRow());
 
-      if (field === 'Drill') {
-        updatedRow.Time1 = '';
-        updatedRow.Time2 = '';
-        updatedRow.Time3 = '';
-      }
-
-      return updatedRow;
+      return updatedData;
     });
+  };
 
-    // Auto-add a new row if editing the last row and it has some value
-    const lastRow = updatedData[updatedData.length - 1];
-    if (!isRowEmpty(lastRow)) {
-      updatedData.push(createEmptyRow());
-    }
-
-    return updatedData;
-  });
-};
-
-    
-  const isRowEmpty = (row) =>
-  Object.values(row).every((v) => v === '' || v === null || v === undefined);
-
+  const isRowEmpty = row =>
+    Object.values(row).every(v => v === '' || v === null || v === undefined);
 
   const getStandardTime = row => {
     const titleData = TimeStandards[row.Title];
     if (!titleData) return null;
     const base = titleData[selectedDrill];
-    if (base == null) return null;
-    return base;
+    return base ?? null;
   };
 
   const calculateAverage = row => {
@@ -136,36 +125,24 @@ const updateCell = (rowIndex, field, value) => {
   return (
     <div className="page">
       <div className="table-container">
-        <button onClick={saveData} className="save-button">
-          Save Table
-        </button>
+        <button onClick={saveData} className="save-button">Save Table</button>
 
         {/* Header */}
         <div
           className="row header"
-          style={{
-            gridTemplateColumns: columns
-              .map(col => (col.key === 'AVG' ? '60px' : '1fr'))
-              .join(' '),
-          }}
+          style={{ gridTemplateColumns: columns.map(col => (col.key === 'AVG' ? '60px' : '1fr')).join(' ') }}
         >
           {columns.map(col => (
-            <div key={col.key} className="cell header">
-              {col.label}
-            </div>
+            <div key={col.key} className="cell header">{col.label}</div>
           ))}
         </div>
 
-        {/* Rows */}
+        {/* Data Rows */}
         {data.map((row, rowIndex) => (
           <div
             key={rowIndex}
             className="row"
-            style={{
-              gridTemplateColumns: columns
-                .map(col => (col.key === 'AVG' ? '60px' : '1fr'))
-                .join(' '),
-            }}
+            style={{ gridTemplateColumns: columns.map(col => (col.key === 'AVG' ? '60px' : '1fr')).join(' ') }}
           >
             {columns.map(col => {
               // AVG
@@ -177,7 +154,7 @@ const updateCell = (rowIndex, field, value) => {
                 );
               }
 
-              // Title
+              // Title dropdown
               if (col.key === 'Title') {
                 return (
                   <select
@@ -187,16 +164,12 @@ const updateCell = (rowIndex, field, value) => {
                     onChange={e => updateCell(rowIndex, col.key, e.target.value)}
                   >
                     <option value="">-- Select Title --</option>
-                    {TitleOptions.map(t => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
+                    {TitleOptions.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 );
               }
 
-              // Weapon
+              // Weapon dropdown
               if (col.key === 'Weapon') {
                 return (
                   <select
@@ -206,53 +179,33 @@ const updateCell = (rowIndex, field, value) => {
                     onChange={e => updateCell(rowIndex, col.key, e.target.value)}
                   >
                     <option value="">-- Select Weapon --</option>
-                    {WeaponOptions.map(w => (
-                      <option key={w} value={w}>
-                        {w}
-                      </option>
-                    ))}
+                    {WeaponOptions.map(w => <option key={w} value={w}>{w}</option>)}
                   </select>
                 );
               }
 
+              // Drill dropdown
+              if (col.key === 'Drill') {
+                const firstWeapon = row.Weapon;
+                const drillsToShow = firstWeapon ? DrillOptionsByWeapon[firstWeapon] : [];
+                return (
+                  <select
+                    key={`${rowIndex}-${col.key}`}
+                    className="cell"
+                    value={selectedDrill}
+                    onChange={e => {
+                      setSelectedDrill(e.target.value);
+                      // reset times for all rows
+                      setData(prev => prev.map(r => ({ ...r, Time1: '', Time2: '', Time3: '' })));
+                    }}
+                  >
+                    <option value="">-- Select Drill --</option>
+                    {drillsToShow.map(d => <option key={d} value={d}>{d}</option>)}
+                  </select>
+                );
+              }
 
-              // Drill
-if (col.key === 'Drill') {
-  const allWeapons = data.map(row => row.Weapon).filter(Boolean);
-  const firstWeapon = allWeapons[0];
-  const drillsToShow = firstWeapon ? DrillOptionsByWeapon[firstWeapon] : [];
-
-  return (
-    <select
-      key={`${rowIndex}-${col.key}`}
-      className="cell"
-      value={selectedDrill}
-      onChange={e => {
-        setSelectedDrill(e.target.value);
-
-        // Reset times for ALL rows when drill changes
-        setData(prev =>
-          prev.map(row => ({
-            ...row,
-            Time1: '',
-            Time2: '',
-            Time3: '',
-          }))
-        );
-      }}
-    >
-      <option value="">-- Select Drill --</option>
-      {drillsToShow.map(d => (
-        <option key={d} value={d}>
-          {d}
-        </option>
-      ))}
-    </select>
-  );
-}
-
-
-              // Time columns
+              // Time columns (dial-free)
               if (col.key.startsWith('Time')) {
                 const standard = getStandardTime(row);
                 const userValue = parseFloat(row[col.key]);
@@ -273,10 +226,12 @@ if (col.key === 'Drill') {
                     <span className="standard">{standard !== null ? standard.toFixed(2) : ''}</span>
                     <input
                       className="time-input"
-                      type="number"
-                      step="0.01"
+                      type="text"
                       value={row[col.key]}
-                      onChange={e => updateCell(rowIndex, col.key, e.target.value)}
+                      onChange={e => {
+                        const newValue = e.target.value;
+                        if (/^\d*\.?\d*$/.test(newValue)) updateCell(rowIndex, col.key, newValue);
+                      }}
                     />
                     <span className="difference" style={{ color: differenceColor }}>
                       {difference !== null ? difference : ''}
@@ -285,7 +240,7 @@ if (col.key === 'Drill') {
                 );
               }
 
-              // Default input
+              // Default text input
               return (
                 <input
                   key={`${rowIndex}-${col.key}`}
@@ -304,4 +259,3 @@ if (col.key === 'Drill') {
 }
 
 export default App;
-
